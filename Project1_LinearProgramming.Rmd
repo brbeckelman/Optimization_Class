@@ -1,0 +1,70 @@
+---
+title: 'Project 1: Linear Programming'
+author: "Brooks Beckelman"
+date: "February 4, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lpSolve)
+```
+
+## Function Inputs 
+
+```{r}
+# Liabilities (in dollars)
+l = c(12000,18000,20000,20000,16000,15000,12000,10000)
+
+# Bond prices (in dollars)
+p = c(102,99,101,98,98,104,100,101,102,94)
+
+# Coupons (in dollars)
+coup = c(5,3.5,5,3.5,4,9,6,8,9,7)
+
+# Maturities (in years)
+m = c(1,2,2,3,4,5,5,6,7,8)
+```
+
+## 1. Formulate portfolio construction problem as a linear program
+
+Decision Variables: amount of each bond (1-10) to purchase (x = x1,...,x10)
+
+Objective: minimize the total cost of the bonds (p*x)
+
+Constraints: cash flow inward from coupon and maturity payments must equal cash flow outward to liabilities for each year (1-8)
+
+```{r}
+# Objective
+c = p
+
+# Constraints
+A = matrix(0,length(l),length(c))
+
+for (i in seq_along(coup)){
+  ## Fill matrix with coupon payments
+  A[1:m[i]-1,i] = coup[i]
+  ## Fill matrix with maturity payments and final coupon payments
+  A[m[i],i] = 100 + coup[i]
+}
+
+## Direction Vector
+dir = rep("=",length(l))
+
+## Constraints Vector 
+b = l
+```
+
+## 2. Test Case
+
+```{r}
+# Solve LP
+s = lp("min",c,A,dir,b)
+sol = s$solution
+
+# Print Optimal Solution
+for (i in seq_along(sol)){
+  cat("Bond",i,"\t:\t",sol[i],"\n")
+}
+```
+
