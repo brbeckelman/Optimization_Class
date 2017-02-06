@@ -205,11 +205,11 @@ for (i in seq_along(sol)){
   dir = rep(&quot;=&quot;,length(L))
   
   ## Constraints Vector
-  b = l
+  b = L
   
   # Solution
   s = lp(&quot;min&quot;,c,A,dir,b)
-  return(s$solution)
+  return(s)
 }</code></pre>
 <p>Let’s test the function using our test case from problem 2.</p>
 <pre class="r"><code># Function Inputs
@@ -226,7 +226,8 @@ coup = c(5,3.5,5,3.5,4,9,6,8,9,7)
 m = c(1,2,2,3,4,5,5,6,7,8)
 
 # Run function
-sol = dedicate_g4(p,coup,m,l)
+s = dedicate_g4(p,coup,m,l)
+sol = s$solution
 
 # Print Optimal Solution
 for (i in seq_along(sol)){
@@ -243,6 +244,75 @@ for (i in seq_along(sol)){
 ## Bond 9   :    104.0899 
 ## Bond 10  :    93.45794</code></pre>
 <p>The function outputs the same result that we saw from building the portfolio manually.</p>
+</div>
+<div id="construct-a-dedicated-portfolio" class="section level2">
+<h2>4. Construct a dedicated portfolio</h2>
+<p>Bond information was collected from the Wall Street Journal (<a href="http://online.wsj.com/mdc/public/page/2_3020-treasury.html#treasuryB" class="uri">http://online.wsj.com/mdc/public/page/2_3020-treasury.html#treasuryB</a>) and stored as a csv file named “TreasuryQuotes_wsj.csv”.</p>
+<pre class="r"><code># Read in bond information and store as data frame
+setwd(&quot;C:/Users/brook/Desktop/MSBA_Spring2017/Optimization/Assignments/Project1&quot;)
+bonds = read.csv(&quot;TreasuryQuotes_wsj.csv&quot;)</code></pre>
+<p>Using the ‘bonds’ data frame, we can now create our input vectors.</p>
+<pre class="r"><code># Limit bonds dataframe to only those that mature/pay coupons at the end of June/December
+dates = c(&quot;6/30/2017&quot;,&quot;12/31/2017&quot;,&quot;6/30/2018&quot;,&quot;12/31/2018&quot;,&quot;6/30/2019&quot;,&quot;12/31/2019&quot;,&quot;6/30/2020&quot;,&quot;12/31/2020&quot;,&quot;6/30/21&quot;,&quot;12/31/2021&quot;,&quot;6/30/2022&quot;,&quot;12/31/2022&quot;)
+
+bonds = bonds[bonds$Maturity %in% dates,]
+
+# Price Vector
+P = bonds$Asked
+
+# Coupon Vector
+C = bonds$Coupon/2
+
+# Maturities Vector (in periods/half-years)
+## Assign each date to period number
+periods = seq_along(dates)
+names(periods) = dates
+
+## Initialize maturities vector with zeros
+M = rep(0,length(bonds$Maturity))
+
+## Add period number corresponding to each maturity date to maturities vector
+for (i in seq_along(M)){
+  date = toString(bonds$Maturity[i])
+  period = periods[date]
+  
+  M[i] = period
+}
+
+# Non-negative liabilities vector (in dollars)
+L = 1000000*c(9,9,10,10,6,6,9,9,10,10,5,3)</code></pre>
+<p>Finally, we can solve for the optimal amount of each bond to purchase using the function we defined previously.</p>
+<pre class="r"><code># Run function
+s = dedicate_g4(P,C,M,L)
+
+optimal_solution = data.frame(bonds$Maturity,bonds$Coupon,bonds$Asked,s$solution)
+names(optimal_solution) = c(&quot;Maturity&quot;,&quot;Coupon&quot;,&quot;Price&quot;,&quot;Amt. to Purchase&quot;)
+optimal_solution</code></pre>
+<pre><code>##      Maturity Coupon    Price Amt. to Purchase
+## 1   6/30/2017  0.625 100.0469                0
+## 2   6/30/2017  0.750 100.0938                0
+## 3   6/30/2017  2.500 100.7734                0
+## 4  12/31/2017  0.750  99.9297                0
+## 5  12/31/2017  1.000 100.1641                0
+## 6  12/31/2017  2.750 101.7188                0
+## 7   6/30/2018  0.625  99.5000                0
+## 8   6/30/2018  1.375 100.5469                0
+## 9   6/30/2018  2.375 101.8984                0
+## 10 12/31/2018  1.250 100.1641                0
+## 11 12/31/2018  1.375 100.3516                0
+## 12 12/31/2018  1.500 100.6172                0
+## 13  6/30/2019  1.000  99.1797                0
+## 14  6/30/2019  1.625 100.6250                0
+## 15 12/31/2019  1.125  99.0313                0
+## 16 12/31/2019  1.625 100.4375                0
+## 17  6/30/2020  1.625 100.0313                0
+## 18  6/30/2020  1.875 100.8984                0
+## 19 12/31/2020  1.750 100.0156                0
+## 20 12/31/2020  2.375 102.3906                0
+## 21 12/31/2021  2.000 100.3359                0
+## 22 12/31/2021  2.125 100.8906                0
+## 23  6/30/2022  2.125 100.4219                0
+## 24 12/31/2022  2.125  99.9453                0</code></pre>
 </div>
 
 

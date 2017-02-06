@@ -95,11 +95,11 @@ dedicate_g4 <- function(P,C,M,L){
   dir = rep("=",length(L))
   
   ## Constraints Vector
-  b = l
+  b = L
   
   # Solution
   s = lp("min",c,A,dir,b)
-  return(s$solution)
+  return(s)
 }
 ```
 
@@ -120,7 +120,8 @@ coup = c(5,3.5,5,3.5,4,9,6,8,9,7)
 m = c(1,2,2,3,4,5,5,6,7,8)
 
 # Run function
-sol = dedicate_g4(p,coup,m,l)
+s = dedicate_g4(p,coup,m,l)
+sol = s$solution
 
 # Print Optimal Solution
 for (i in seq_along(sol)){
@@ -132,8 +133,55 @@ The function outputs the same result that we saw from building the portfolio man
 
 ## 4. Construct a dedicated portfolio
 
+Bond information was collected from the Wall Street Journal (http://online.wsj.com/mdc/public/page/2_3020-treasury.html#treasuryB) and stored as a csv file named "TreasuryQuotes_wsj.csv".
+
 ```{r}
+# Read in bond information and store as data frame
+setwd("C:/Users/brook/Desktop/MSBA_Spring2017/Optimization/Assignments/Project1")
+bonds = read.csv("TreasuryQuotes_wsj.csv")
+```
+
+Using the 'bonds' data frame, we can now create our input vectors.
+
+```{r}
+# Limit bonds dataframe to only those that mature/pay coupons at the end of June/December
+dates = c("6/30/2017","12/31/2017","6/30/2018","12/31/2018","6/30/2019","12/31/2019","6/30/2020","12/31/2020","6/30/21","12/31/2021","6/30/2022","12/31/2022")
+
+bonds = bonds[bonds$Maturity %in% dates,]
+
+# Price Vector
+P = bonds$Asked
+
+# Coupon Vector
+C = bonds$Coupon/2
+
+# Maturities Vector (in periods/half-years)
+## Assign each date to period number
+periods = seq_along(dates)
+names(periods) = dates
+
+## Initialize maturities vector with zeros
+M = rep(0,length(bonds$Maturity))
+
+## Add period number corresponding to each maturity date to maturities vector
+for (i in seq_along(M)){
+  date = toString(bonds$Maturity[i])
+  period = periods[date]
+  
+  M[i] = period
+}
+
 # Non-negative liabilities vector (in dollars)
 L = 1000000*c(9,9,10,10,6,6,9,9,10,10,5,3)
 ```
 
+Finally, we can solve for the optimal amount of each bond to purchase using the function we defined previously.
+
+```{r}
+# Run function
+s = dedicate_g4(P,C,M,L)
+
+optimal_solution = data.frame(bonds$Maturity,bonds$Coupon,bonds$Asked,s$solution)
+names(optimal_solution) = c("Maturity","Coupon","Price","Amt. to Purchase")
+optimal_solution
+```
