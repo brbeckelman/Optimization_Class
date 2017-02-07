@@ -9,7 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 rm(list=ls())
 library(lpSolve)
-library(XML)
 ```
 
 ## Function Inputs 
@@ -98,7 +97,7 @@ dedicate_g4 <- function(P,C,M,L){
   b = L
   
   # Solution
-  s = lp("min",c,A,dir,b)
+  s = lp("min",c,A,dir,b,compute.sens=1)
   return(s)
 }
 ```
@@ -137,7 +136,7 @@ Bond information was collected from the Wall Street Journal (http://online.wsj.c
 
 ```{r}
 # Read in bond information and store as data frame
-setwd("C:/Users/brook/Desktop/MSBA_Spring2017/Optimization/Assignments/Project1")
+setwd(setwd("C:/Users/brook/Desktop/MSBA_Spring2017/Optimization/Assignments/Project1"))
 bonds = read.csv("TreasuryQuotes_wsj.csv")
 ```
 
@@ -145,7 +144,8 @@ Using the 'bonds' data frame, we can now create our input vectors.
 
 ```{r}
 # Limit bonds dataframe to only those that mature/pay coupons at the end of June/December
-dates = c("6/30/2017","12/31/2017","6/30/2018","12/31/2018","6/30/2019","12/31/2019","6/30/2020","12/31/2020","6/30/21","12/31/2021","6/30/2022","12/31/2022")
+dates = c("6/30/2017","12/31/2017","6/30/2018","12/31/2018","6/30/2019","12/31/2019",
+          "6/30/2020","12/31/2020","6/30/2021","12/31/2021","6/30/2022","12/31/2022")
 
 bonds = bonds[bonds$Maturity %in% dates,]
 
@@ -178,6 +178,7 @@ L = 1000000*c(9,9,10,10,6,6,9,9,10,10,5,3)
 Finally, we can solve for the optimal amount of each bond to purchase using the function we defined previously.
 
 ```{r}
+options("scipen"=100, "digits"=4)
 # Run function
 s = dedicate_g4(P,C,M,L)
 
@@ -185,3 +186,20 @@ optimal_solution = data.frame(bonds$Maturity,bonds$Coupon,bonds$Asked,s$solution
 names(optimal_solution) = c("Maturity","Coupon","Price","Amt. to Purchase")
 optimal_solution
 ```
+
+### Sensitivity Analysis
+Next we can evaluate the sensitivity of this model to the liability constraints.
+
+```{r}
+optimal_solution_sens = data.frame(dates,L,s$duals[0:length(L)],s$duals.from[0:length(L)],s$duals.to[0:length(L)])
+names(optimal_solution_sens) = c("Date","Liability","Duals","Duals From","Duals To")
+
+optimal_solution_sens
+```
+
+```{r}
+plot(periods, optimal_solution_sens$Duals, main="Liability Constraint Sensitivities Over Time", xlab="Liability Date", ylab="Duals", type='o', col='blue', xaxt='n')
+axis(1, at=1:12, labels=dates[1:12])
+```
+
+The duals (i.e. sensitivity of the constraint for each half-year) can be interperted as the time value of money. In other words,  1 dollar on 12/31/2022 is worth 88 cents today. The Duals From & To are the range of liabilities for that date for which the duals/sensitivity applies.
